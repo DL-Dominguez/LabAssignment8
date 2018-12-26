@@ -2,20 +2,42 @@ import { Component, OnInit } from '@angular/core';
 import { Contact } from './contact.module';
 import { Http } from '@angular/http';
 import { isNgTemplate } from '@angular/compiler';
+import { LocalStorageService} from '../localStorageService';
+import { ActivatedRoute} from '@angular/router';
+import { IUser } from '../login/login.component';
+import { Router } from '@angular/router';
 
 @Component({
-  selector: 'contact',
+  selector: 'app-contact',
   templateUrl: './contact.component.html',
   styleUrls: ['./contact.component.css']
 })
 export class ContactComponent implements OnInit {
 
   contacts: Array<Contact> = [];
-  contactParams: string = '';
-  constructor(private http: Http) { }
+  contactParams = '';
+  localStorageService: LocalStorageService<Contact>;
+  currentUser: IUser;
+  constructor(
+    private http: Http,
+    private activatedRoute:ActivatedRoute,
+    private router: Router
+    ) {
+    this.localStorageService = new LocalStorageService('contacts');
+   }
 
   async ngOnInit() {
+    const currentUser = this.localStorageService.getItemsFromLocalStorage('user');
+  if (currentUser == null) {
+  this.router.navigate(['login']);
+
+}
+
     this.loadContacts();
+    this.activatedRoute.params.subscribe((data: IUser) => {
+      console.log('data passed from login component tothis component', data);
+      this.currentUser = data;
+    });
 
   }
   async loadContacts() {
@@ -48,12 +70,14 @@ this.sortByID(this.contacts);
 
   saveItemsToLocalStorage(contacts: Array<Contact>) {
     contacts = this.sortByID(contacts);
-    const savedContacts = localStorage.setItem('contacts', JSON.stringify(contacts));
-    return savedContacts;
+    return this.localStorageService.saveItemsToLocalStorage(contacts);
+    // const savedContacts = localStorage.setItem('contacts', JSON.stringify(contacts));
+    // return savedContacts;
   }
 
   getItemsFromLocalStorage(key: string) {
    const savedContacts = JSON.parse(localStorage.getItem(key));
+   return this.localStorageService.getItemsFromLocalStorage(key);
    return savedContacts;
     
   }
@@ -79,6 +103,13 @@ sortByID(contacts: Array<Contact>) {
     return prevContact.id > presContact.id ? 1 : -1;
   });
   return contacts;
+}
+
+logout() {
+  // clear localStorage
+  this.localStorageService.clearItemFromLocalStorage('user');
+  // navigate to login page
+  this.router.navigate(['']);
 }
 
 }
